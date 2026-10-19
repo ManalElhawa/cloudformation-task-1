@@ -1,9 +1,18 @@
 # cloudformation-task-1
-IAC Course CloudFormation Assignment#1
+IAC Course, CloudFormation Assignment#1
 
 Student ID: L00205331
 
 Student Name: Manal Elhawa
+
+=============================================================================
+### Work Log
+
+- Monday 19-Oct
+
+Tested the template file only using the CloudFront & S3.
+
+After uploading the template, I uploaded the index.htm to the S3 bucket 
 
 =============================================================================
 ### References
@@ -16,3 +25,6 @@ Student Name: Manal Elhawa
 Prompt: 
 
 ```what files should I add to a github repo (similar to a README file) to follow git repos best practices? Given that the repo will include a cloudformation project to deploy a website on AWS using cloudformation?```
+
+- [CloudFormation Templates](https://github.com/aws-cloudformation/aws-cloudformation-templates/)
+
