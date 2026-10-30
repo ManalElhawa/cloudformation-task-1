@@ -76,19 +76,19 @@ Resources:
         - Key: Organization
           Value: ATU
   
-    PrivateSubnet3:
+  PrivateSubnet3:
     Type: 'AWS::EC2::Subnet'
     Properties:
       VpcId: !Ref VPC
       CidrBlock: 10.0.5.0/24
       AvailabilityZone: !Select
-        - '0'
-        - !GetAZs ''
+      - '0'
+      - !GetAZs ''
       Tags:
-        - Key: Name
-          Value: Website Private Subnet 3
-        - Key: Organization
-          Value: ATU
+         - Key: Name
+           Value: Website Private Subnet 3
+         - Key: Organization
+           Value: ATU
 
   PrivateSubnet4:
     Type: 'AWS::EC2::Subnet'
@@ -109,22 +109,25 @@ Resources:
   DBSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      GroupDescription: DB Security Group
+      GroupDescription: Permit access from Web Security Group
       GroupName: DB Security Group
       VpcId: !Ref VPC
       Tags:
         - Key: Name
           Value: WebsiteDB Security Group
+        - Key: Organization
+          Value: ATU
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: '3306'
           ToPort: '3306'
-          SourceSecurityGroupId: !Ref AppSecurityGroup
+          SourceSecurityGroupId: !Ref WebSecurityGroup
 
   DBsubnetGroup:
     Type: 'AWS::RDS::DBSubnetGroup'
     Properties:
-      DBSubnetGroupDescription: Lab DB Subnet Group
+      DBSubnetGroupName: DB Subnet Group
+      DBSubnetGroupDescription: DB Subnet Group
       SubnetIds:
         - !Ref PrivateSubnet3
         - !Ref PrivateSubnet4

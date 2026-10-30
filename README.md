@@ -14,6 +14,10 @@ Tested the template file only using the CloudFront & S3.
 
 After uploading the template, I uploaded the index.htm to the S3 bucket 
 
+- Friday 30-Oct
+
+Tested the template file for the 3 tier website to create: VPC, Public & Private subnets, and security groups.
+
 =============================================================================
 ### References
 
@@ -27,4 +31,8 @@ Prompt:
 ```what files should I add to a github repo (similar to a README file) to follow git repos best practices? Given that the repo will include a cloudformation project to deploy a website on AWS using cloudformation?```
 
 - [CloudFormation Templates](https://github.com/aws-cloudformation/aws-cloudformation-templates/)
+
+-----------------------------------------------------------------------------------------------------
+
+- Used Lab 05 & 06 CloudFormation stack files in the AWS Cloud Foundation course as reference.
 
