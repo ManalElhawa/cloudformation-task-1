@@ -2,10 +2,13 @@ AWSTemplateFormatVersion: 2010-09-09
 
 Parameters:
 
+  AmazonLinuxAMIID:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
 
 Resources:
 #########
-# VPC Resources
+# Network Resources
 #########
   VPC:
     Type: 'AWS::EC2::VPC'
@@ -16,7 +19,7 @@ Resources:
           Value: Website VPC
         - Key: Organization
           Value: ATU
-          
+
   PublicSubnet1:
     Type: 'AWS::EC2::Subnet'
     Properties:
@@ -55,7 +58,7 @@ Resources:
         - !GetAZs ''
       Tags:
         - Key: Name
-          Value: WebsitePrivate Subnet 1
+          Value: Website Private Subnet 1
         - Key: Organization
           Value: ATU
 
@@ -69,7 +72,7 @@ Resources:
         - !GetAZs ''
       Tags:
         - Key: Name
-          Value: WebsitePrivate Subnet 2
+          Value: Website Private Subnet 2
         - Key: Organization
           Value: ATU
   
@@ -83,7 +86,7 @@ Resources:
         - !GetAZs ''
       Tags:
         - Key: Name
-          Value: WebsitePrivate Subnet 3
+          Value: Website Private Subnet 3
         - Key: Organization
           Value: ATU
 
@@ -100,3 +103,52 @@ Resources:
           Value: Website Private Subnet 4
         - Key: Organization
           Value: ATU
+#########
+# DB Resources
+#########
+  DBSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: DB Security Group
+      GroupName: DB Security Group
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: WebsiteDB Security Group
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '3306'
+          ToPort: '3306'
+          SourceSecurityGroupId: !Ref AppSecurityGroup
+
+  DBsubnetGroup:
+    Type: 'AWS::RDS::DBSubnetGroup'
+    Properties:
+      DBSubnetGroupDescription: Lab DB Subnet Group
+      SubnetIds:
+        - !Ref PrivateSubnet3
+        - !Ref PrivateSubnet4
+
+#########
+# Web Resources
+#########
+  WebSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enable HTTP access
+      GroupName: Web Security Group
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: Website Web Security Group
+        - Key: Organization
+          Value: ATU
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0
