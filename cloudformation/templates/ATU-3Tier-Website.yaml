@@ -298,6 +298,19 @@ Resources:
       LoadBalancerArn: !Ref WebApplicationLoadBalancer
       Port: 80
       Protocol: HTTP
+
+  NatGatewayEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    DependsOn: PublicSubnet1
+    Properties:
+      ConnectivityType: public
+      AllocationId: !GetAtt NatGatewayEIP.AllocationId
+      SubnetId: !GetAtt PublicSubnet1.SubnetId
   
 #########
 # APP Resources
@@ -337,11 +350,11 @@ Resources:
 
   AppPrivateRoute:
     Type: AWS::EC2::Route
-    DependsOn: SwiftCartNatGateway
+    DependsOn: NatGateway
     Properties:
       RouteTableId: !Ref AppPrivateRouteTable
       DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref SwiftCartNatGateway
+      NatGatewayId: !Ref NatGateway
 
   PrivateSubnet1RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
