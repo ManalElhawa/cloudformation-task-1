@@ -31,66 +31,9 @@ Resources:
         - Key: Environment
           Value: Test
 
-  PublicSubnet1:
-    Type: 'AWS::EC2::Subnet'
-    Properties:
-      VpcId: !Ref VPC
-      CidrBlock: 10.0.0.0/24
-      AvailabilityZone: !Select
-        - '0'
-        - !GetAZs ''
-      Tags:
-        - Key: Name
-          Value: Website Public Subnet 1
-        - Key: Organization
-          Value: ATU
-        - Key: Environment
-          Value: Test
-
-  PublicSubnet2:
-    Type: 'AWS::EC2::Subnet'
-    Properties:
-      VpcId: !Ref VPC
-      CidrBlock: 10.0.2.0/24
-      AvailabilityZone: !Select
-        - '1'
-        - !GetAZs ''
-      Tags:
-        - Key: Name
-          Value: Website Public Subnet 2
-        - Key: Organization
-          Value: ATU
-        - Key: Environment
-          Value: Test
-        
-  PrivateSubnet1:
-    Type: 'AWS::EC2::Subnet'
-    Properties:
-      VpcId: !Ref VPC
-      CidrBlock: 10.0.1.0/24
-      AvailabilityZone: !Select
-        - '0'
-        - !GetAZs ''
-      Tags:
-        - Key: Name
-          Value: Website Private Subnet 1
-        - Key: Organization
-          Value: ATU
-
-  PrivateSubnet2:
-    Type: 'AWS::EC2::Subnet'
-    Properties:
-      VpcId: !Ref VPC
-      CidrBlock: 10.0.3.0/24
-      AvailabilityZone: !Select
-        - '1'
-        - !GetAZs ''
-      Tags:
-        - Key: Name
-          Value: Website Private Subnet 2
-        - Key: Organization
-          Value: ATU
-  
+#########
+# DB Resources
+#########
   PrivateSubnet3:
     Type: 'AWS::EC2::Subnet'
     Properties:
@@ -120,55 +63,19 @@ Resources:
           Value: ATU
         - Key: Environment
           Value: Test
-
-  InternetGateway:
-    Type: 'AWS::EC2::InternetGateway'
-    DependsOn:
-      - VPC
-
-  AttachGateway:
-    Type: 'AWS::EC2::VPCGatewayAttachment'
-    Properties:
-      VpcId: !Ref VPC
-      InternetGatewayId: !Ref InternetGateway
-
-  PublicRouteTable:
-    Type: 'AWS::EC2::RouteTable'
-    Properties:
-      VpcId: !Ref VPC
-      Tags:
-        - Key: Name
-          Value: Website Public Route Table
-        - Key: Organization
-          Value: ATU
-        - Key: Environment
-          Value: Test
   
-  PublicRoute:
-    Type: 'AWS::EC2::Route'
+  PrivateSubnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-       RouteTableId: !Ref PublicRouteTable
-       DestinationCidrBlock: 0.0.0.0/0
-       GatewayId: !Ref InternetGateway
-    DependsOn:
-      - VPC
-      - AttachGateway
+      SubnetId: !Ref PrivateSubnet3
+      RouteTableId: !Ref AppPrivateRouteTable
 
-  PublicSubnet1RouteTableAssociation:
-    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+  PrivateSubnet4RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-       SubnetId: !Ref PublicSubnet1
-       RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PrivateSubnet4
+      RouteTableId: !Ref AppPrivateRouteTable
 
-  PublicSubnet2RouteTableAssociation:
-    Type: 'AWS::EC2::SubnetRouteTableAssociation'
-    Properties:
-       SubnetId: !Ref PublicSubnet2
-       RouteTableId: !Ref PublicRouteTable
-
-#########
-# DB Resources
-#########
   DBSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -219,6 +126,83 @@ Resources:
 #########
 # Web Resources
 #########
+  PublicSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.0.0/24
+      AvailabilityZone: !Select
+        - '0'
+        - !GetAZs ''
+      Tags:
+        - Key: Name
+          Value: Website Public Subnet 1
+        - Key: Organization
+          Value: ATU
+        - Key: Environment
+          Value: Test
+
+  PublicSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: !Select
+        - '1'
+        - !GetAZs ''
+      Tags:
+        - Key: Name
+          Value: Website Public Subnet 2
+        - Key: Organization
+          Value: ATU
+        - Key: Environment
+          Value: Test
+
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    DependsOn:
+      - VPC
+
+  AttachGateway:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: Website Public Route Table
+        - Key: Organization
+          Value: ATU
+        - Key: Environment
+          Value: Test
+  
+  PublicRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+       RouteTableId: !Ref PublicRouteTable
+       DestinationCidrBlock: 0.0.0.0/0
+       GatewayId: !Ref InternetGateway
+    DependsOn:
+      - VPC
+      - AttachGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+       SubnetId: !Ref PublicSubnet1
+       RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+       SubnetId: !Ref PublicSubnet2
+       RouteTableId: !Ref PublicRouteTable
+
   WebSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -239,3 +223,36 @@ Resources:
           FromPort: '22'
           ToPort: '22'
           CidrIp: 0.0.0.0/0
+
+#########
+# APP Resources
+#########
+  PrivateSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select
+        - '0'
+        - !GetAZs ''
+      Tags:
+        - Key: Name
+          Value: Website Private Subnet 1
+        - Key: Organization
+          Value: ATU
+
+  PrivateSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.3.0/24
+      AvailabilityZone: !Select
+        - '1'
+        - !GetAZs ''
+      Tags:
+        - Key: Name
+          Value: Website Private Subnet 2
+        - Key: Organization
+          Value: ATU
+  
+ 
