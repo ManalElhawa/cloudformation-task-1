@@ -269,6 +269,35 @@ Resources:
       AutoScalingGroupName: !Ref WebAutoScalingGroup
       AdjustmentType: ChangeInCapacity
       ScalingAdjustment: '1'
+
+  WebApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: "WebsiteALB"
+      SecurityGroups:
+        - !Ref WebSecurityGroup
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+
+  WebALBTargetGroup:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      HealthCheckIntervalSeconds: '30'
+      HealthCheckTimeoutSeconds: '5'
+      Port: '80'
+      Protocol: HTTP
+      VpcId: !Ref VPC
+
+  WebALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref WebALBTargetGroup
+      LoadBalancerArn: !Ref WebApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
   
 #########
 # APP Resources
@@ -304,7 +333,7 @@ Resources:
   AppPrivateRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
-      VpcId: !Ref SwiftCartVPC
+      VpcId: !Ref VPC
 
   AppPrivateRoute:
     Type: AWS::EC2::Route
@@ -324,7 +353,7 @@ Resources:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PrivateSubnet2
-      RouteTableId: !Ref SwiftCartPrivateRouteTable
+      RouteTableId: !Ref AppPrivateRouteTable
   
   AppSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
