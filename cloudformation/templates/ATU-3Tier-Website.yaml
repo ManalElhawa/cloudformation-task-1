@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: 2010-09-09
 
 Parameters:
-
+#These parameters can be updated when creating the stack
   AmazonLinuxAMIID:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
@@ -44,9 +44,11 @@ Resources:
       - !GetAZs ''
       Tags:
          - Key: Name
-           Value: Website Private Subnet 3
+           Value: Website DB Private Subnet 3
          - Key: Organization
            Value: ATU
+         - Key: Environment
+           Value: Test
 
   PrivateSubnet4:
     Type: 'AWS::EC2::Subnet'
@@ -58,7 +60,7 @@ Resources:
         - !GetAZs ''
       Tags:
         - Key: Name
-          Value: Website Private Subnet 4
+          Value: Website DB Private Subnet 4
         - Key: Organization
           Value: ATU
         - Key: Environment
@@ -84,9 +86,11 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: WebsiteDB Security Group
+          Value: Website DB Security Group
         - Key: Organization
           Value: ATU
+        - Key: Environment
+          Value: Test
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: '3306'
@@ -98,6 +102,13 @@ Resources:
     Properties:
       DBSubnetGroupName: DB Subnet Group
       DBSubnetGroupDescription: DB Subnet Group
+      Tags:
+        - Key: Name
+          Value: Website DB Subnet Group
+        - Key: Organization
+          Value: ATU
+        - Key: Environment
+          Value: Test
       SubnetIds:
         - !Ref PrivateSubnet3
         - !Ref PrivateSubnet4
@@ -117,8 +128,8 @@ Resources:
       DBInstanceClass: db.t3.micro
       MultiAZ: false
       Tags:
-         - Value: "Website DB"
-           Key: "Name"
+         - Key: Name
+           Value: Website DB
          - Key: Organization
            Value: ATU
          - Key: Environment
@@ -136,7 +147,7 @@ Resources:
         - !GetAZs ''
       Tags:
         - Key: Name
-          Value: Website Public Subnet 1
+          Value: Website Web Public Subnet 1
         - Key: Organization
           Value: ATU
         - Key: Environment
@@ -152,7 +163,7 @@ Resources:
         - !GetAZs ''
       Tags:
         - Key: Name
-          Value: Website Public Subnet 2
+          Value: Website Web Public Subnet 2
         - Key: Organization
           Value: ATU
         - Key: Environment
@@ -214,6 +225,8 @@ Resources:
           Value: Website Web Security Group
         - Key: Organization
           Value: ATU
+        - Key: Environment
+          Value: Test
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: '80'
@@ -264,6 +277,16 @@ Resources:
         - !Ref WebALBTargetGroup
       MetricsCollection:
         - Granularity: 1Minute
+      Tags:
+        - Key: Name
+          Value: Website Web AutoSclaing Group
+          PropagateAtLaunch: true
+        - Key: Organization
+          Value: ATU
+          PropagateAtLaunch: true
+        - Key: Environment
+          Value: Test
+          PropagateAtLaunch: true
 
   WebAutoScalingPolicy:
     Type: AWS::AutoScaling::ScalingPolicy
@@ -281,6 +304,13 @@ Resources:
       Subnets:
         - !Ref PublicSubnet1
         - !Ref PublicSubnet2
+      Tags:
+        - Key: Name
+          Value: Website ALB
+        - Key: Organization
+          Value: ATU
+        - Key: Environment
+          Value: Test
 
   WebALBTargetGroup:
     Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
@@ -290,6 +320,13 @@ Resources:
       Port: '80'
       Protocol: HTTP
       VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: Website Web ALB TargetGroup
+        - Key: Organization
+          Value: ATU
+        - Key: Environment
+          Value: Test
 
   WebALBListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
@@ -300,6 +337,13 @@ Resources:
       LoadBalancerArn: !Ref WebApplicationLoadBalancer
       Port: 80
       Protocol: HTTP
+      Tags:
+        - Key: Name
+          Value: Website Web ALB Listener
+        - Key: Organization
+          Value: ATU
+        - Key: Environment
+          Value: Test
 
   NatGatewayEIP:
     Type: AWS::EC2::EIP
@@ -327,9 +371,11 @@ Resources:
         - !GetAZs ''
       Tags:
         - Key: Name
-          Value: Website Private Subnet 1
+          Value: Website APP Private Subnet 1
         - Key: Organization
           Value: ATU
+        - Key: Environment
+          Value: Test
 
   PrivateSubnet2:
     Type: 'AWS::EC2::Subnet'
@@ -341,9 +387,11 @@ Resources:
         - !GetAZs ''
       Tags:
         - Key: Name
-          Value: Website Private Subnet 2
+          Value: Website APP Private Subnet 2
         - Key: Organization
           Value: ATU
+        - Key: Environment
+          Value: Test
 
   AppPrivateRouteTable:
     Type: AWS::EC2::RouteTable
@@ -429,6 +477,16 @@ Resources:
         - !Ref PrivateSubnet2
       MetricsCollection:
         - Granularity: 1Minute
+      Tags:
+        - Key: Name
+          Value: Website App AutoSclaing Group
+          PropagateAtLaunch: true
+        - Key: Organization
+          Value: ATU
+          PropagateAtLaunch: true
+        - Key: Environment
+          Value: Test
+          PropagateAtLaunch: true
 
   AppAutoScalingPolicy:
     Type: AWS::AutoScaling::ScalingPolicy
