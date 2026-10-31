@@ -260,6 +260,8 @@ Resources:
       VPCZoneIdentifier:
         - !Ref PublicSubnet1
         - !Ref PublicSubnet2
+      TargetGroupARNs:
+        - !Ref WebALBTargetGroup
       MetricsCollection:
         - Granularity: 1Minute
 
