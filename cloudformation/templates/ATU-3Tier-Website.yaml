@@ -6,6 +6,15 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
 
+  MasterUsername:
+    Type: String
+    Description: The username for the database.
+
+  MasterUserPassword:
+    Type: String
+    Description: The password for the database.
+    NoEcho: true
+
 Resources:
 #########
 # Network Resources
@@ -19,6 +28,8 @@ Resources:
           Value: Website VPC
         - Key: Organization
           Value: ATU
+        - Key: Environment
+          Value: Test
 
   PublicSubnet1:
     Type: 'AWS::EC2::Subnet'
@@ -33,6 +44,8 @@ Resources:
           Value: Website Public Subnet 1
         - Key: Organization
           Value: ATU
+        - Key: Environment
+          Value: Test
 
   PublicSubnet2:
     Type: 'AWS::EC2::Subnet'
@@ -47,7 +60,9 @@ Resources:
           Value: Website Public Subnet 2
         - Key: Organization
           Value: ATU
-
+        - Key: Environment
+          Value: Test
+        
   PrivateSubnet1:
     Type: 'AWS::EC2::Subnet'
     Properties:
@@ -103,6 +118,54 @@ Resources:
           Value: Website Private Subnet 4
         - Key: Organization
           Value: ATU
+        - Key: Environment
+          Value: Test
+
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    DependsOn:
+      - VPC
+
+  AttachGateway:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: Website Public Route Table
+        - Key: Organization
+          Value: ATU
+        - Key: Environment
+          Value: Test
+  
+  PublicRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+       RouteTableId: !Ref PublicRouteTable
+       DestinationCidrBlock: 0.0.0.0/0
+       GatewayId: !Ref InternetGateway
+    DependsOn:
+      - VPC
+      - AttachGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+       SubnetId: !Ref PublicSubnet1
+       RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+       SubnetId: !Ref PublicSubnet2
+       RouteTableId: !Ref PublicRouteTable
+
 #########
 # DB Resources
 #########
