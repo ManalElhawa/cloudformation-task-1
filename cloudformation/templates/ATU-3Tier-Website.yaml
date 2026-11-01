@@ -476,6 +476,8 @@ Resources:
       VPCZoneIdentifier:
         - !Ref PrivateSubnet1
         - !Ref PrivateSubnet2
+      TargetGroupARNs:
+        - !Ref AppALBTargetGroup
       MetricsCollection:
         - Granularity: 1Minute
       Tags:
@@ -495,3 +497,53 @@ Resources:
       AutoScalingGroupName: !Ref AppAutoScalingGroup
       AdjustmentType: ChangeInCapacity
       ScalingAdjustment: '1'
+
+  AppApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: "AppALB"
+      SecurityGroups:
+        - !Ref AppSecurityGroup
+      Subnets:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      Tags:
+        - Key: Name
+          Value: App ALB
+        - Key: Organization
+          Value: ATU
+        - Key: Environment
+          Value: Test
+
+  AppALBTargetGroup:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      HealthCheckIntervalSeconds: '30'
+      HealthCheckTimeoutSeconds: '5'
+      Port: '80'
+      Protocol: HTTP
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: Website App ALB TargetGroup
+        - Key: Organization
+          Value: ATU
+        - Key: Environment
+          Value: Test
+
+  AppALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref AppALBTargetGroup
+      LoadBalancerArn: !Ref AppApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      Tags:
+        - Key: Name
+          Value: Website App ALB Listener
+        - Key: Organization
+          Value: ATU
+        - Key: Environment
+          Value: Test
