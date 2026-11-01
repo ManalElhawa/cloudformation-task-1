@@ -261,9 +261,10 @@ Resources:
             EOF
 
             cat > /var/www/html/index.html <<'EOF'
-            <h1>Swift Cart</h1>
+            <h1>Student Name: Manal Elhawa</h1>
+            <h1>Student ID: L00205331</h1>
             <p>Web layer is responding.</p>
-            <a href="/app/">Check the app layer</a>
+            <a href="/app/db-check.php">Check the app layer</a>
             EOF
 
             systemctl enable --now httpd
@@ -468,14 +469,41 @@ Resources:
               - !Ref AppSecurityGroup
         UserData:
           Fn::Base64: !Sub |
-            #!/bin/bash
-            yum update -y
-            yum install httpd -y
-            systemctl start httpd
-            systemctl enable httpd
-            amazon-linux-extras install epel -y
-            yum install stress -y
-            echo "<h1>Welcome To Swift Cart </h1>" > /var/www/html/index.html
+            #!/bin/bash -xe
+            dnf install -y httpd php php-mysqli
+
+            cat > /var/www/html/db-check.php <<'PHP'
+            <?php
+            $host = '${RDSDBInstance.Endpoint.Address}';
+            $user = '${MasterUsername}';
+            $password = '${MasterUserPassword}';
+
+            mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+
+            try {
+                $db = new mysqli($host, $user, $password, 'mysql', 3306);
+                $result = $db->query('SELECT 1');
+                $result->fetch_row();
+
+                header('Content-Type: text/plain');
+                echo "App tier connected to the database.";
+            } catch (Throwable $e) {
+                http_response_code(500);
+                header('Content-Type: text/plain');
+                echo "Database connection failed.";
+                error_log($e->getMessage());
+            }
+            ?>
+            PHP
+
+            cat > /var/www/html/health.php <<'PHP'
+            <?php
+            http_response_code(200);
+            echo "healthy";
+            ?>
+            PHP
+            
+            systemctl enable --now httpd
 
   AppAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
@@ -534,6 +562,7 @@ Resources:
     Properties:
       HealthCheckIntervalSeconds: '30'
       HealthCheckTimeoutSeconds: '5'
+      HealthCheckPath: /health.php
       Port: '80'
       Protocol: HTTP
       VpcId: !Ref VPC
