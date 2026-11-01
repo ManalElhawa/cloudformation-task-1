@@ -500,12 +500,14 @@ Resources:
             mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
             try {
-                $db = new mysqli($host, $user, $password, 'mysql', 3306);
-                $result = $db->query('SELECT 1');
-                $result->fetch_row();
+                <?php
+                $result = $db->query('SELECT 1 AS connection_test, VERSION() AS server_version');
+                $details = $result->fetch_assoc();
 
                 header('Content-Type: text/plain');
-                echo "App tier connected to the database.";
+                echo "App tier: connected\n";
+                echo "Database test: SELECT 1 returned " . $details['connection_test'] . "\n";
+                echo "MySQL server version: " . $details['server_version'] . "\n";
             } catch (Throwable $e) {
                 http_response_code(500);
                 header('Content-Type: text/plain');
