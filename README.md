@@ -20,7 +20,13 @@ Student Name: Manal Elhawa
 
 - In a production setup tags are important to track ownership and billing. As a sample I have created tags for the environment, orgnaization and name.
 
-- Also in a production setup, the DB password will be stored in a seceret managemnt software (vault). But since this is not available here, I have added the password as a user variable.
+- Also in a production setup, the DB password will be stored in a seceret managemnt system (example: Hashicorp vault). But since this is not available here, I have added the password as a user variable.
+
+- I have created bith the Web and APP layers as EC2 scaling groups for high availability. I used application load balancers for the web and app layers to balance load on the EC2 instances.
+
+- I used the web instances as a reverse proxy for the application. And the application queries the DB. This is just to validate the connectivity Web --> APP --> DB.
+
+- Both the APP & DB are in private subnets. Unlike the web which is hosted in a public subnet and is reachable through the intenet gateway.
 
 =============================================================================
 ### Work Log
