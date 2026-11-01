@@ -1,0 +1,402 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: This template creates a Web, Application & Database Tier for a fictional e-commerce company "SwiftCart"
+
+Parameters:
+  MasterUsername:
+    Type: String
+    Description: The username for the database.
+
+  MasterUserPassword:
+    Type: String
+    Description: The password for the database.
+    NoEcho: true
+
+  MyIPAddress:
+    Type: String
+    Description: My IP address for the bastion host.
+
+  KeyPair:
+    Type: String
+    Description: SSH Key for the bastion host & EC2 instances.
+
+Resources:
+  # Web Tier
+  # VPC
+  SwiftCartVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.10.0.0/16
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+
+  # Security Group for Web Tier
+  SwiftCartSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow HTTP & SSH access
+      VpcId:
+        Ref: SwiftCartVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: icmp
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 10.10.0.0/16
+
+  # Internet Gateway
+  SwiftCartInternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  # Attach IG to VPC
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: SwiftCartVPC
+      InternetGatewayId:
+        Ref: SwiftCartInternetGateway
+  # Public Subnets for Web Tier
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: SwiftCartVPC
+      CidrBlock: 10.10.1.0/24
+      AvailabilityZone: "us-east-1a"
+      MapPublicIpOnLaunch: true
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: SwiftCartVPC
+      CidrBlock: 10.10.2.0/24
+      AvailabilityZone: "us-east-1b"
+      MapPublicIpOnLaunch: true
+
+  # Public Route Table
+  SwiftCartPublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: SwiftCartVPC
+
+  # Configuring Public Route Table
+  SwiftCartRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: SwiftCartPublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: SwiftCartInternetGateway
+
+  # Route association for Public Subnets
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicSubnet1
+      RouteTableId:
+        Ref: SwiftCartPublicRouteTable
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicSubnet2
+      RouteTableId:
+        Ref: SwiftCartPublicRouteTable
+
+  # NAT Elastic IP
+  SwiftCartElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  # NAT Gateway for Web Tier
+  SwiftCartNatGateway:
+    Type: AWS::EC2::NatGateway
+    DependsOn: PublicSubnet1
+    Properties:
+      ConnectivityType: public
+      AllocationId: !GetAtt SwiftCartElasticIP.AllocationId
+      SubnetId: !GetAtt PublicSubnet1.SubnetId
+
+  # Bastion Host
+  SwiftCartBastionHost:
+    Type: AWS::EC2::Instance
+    Properties:
+      SecurityGroupIds:
+        - !Ref SwiftCartBastionHostSG
+      ImageId: ami-0f403e3180720dd7e
+      InstanceType: t2.micro
+      SubnetId: !Ref PublicSubnet1
+      KeyName: !Ref KeyPair
+  # Bastion Host Security Group
+  SwiftCartBastionHostSG:
+    Type: AWS::EC2::SecurityGroup
+    DependsOn: SwiftCartVPC
+    Properties:
+      GroupName: !Sub SwiftCartBastionHostSG
+      GroupDescription: "Security group for Bastion Host"
+      VpcId:
+        Ref: SwiftCartVPC
+
+  # Bastion Host Security Group SSH Ingress Rule
+  SwiftCartBastionHostSGIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: SwiftCartBastionHostSG
+    Properties:
+      CidrIp: !Ref MyIPAddress
+      Description: "Allow SSH from my local machine"
+      GroupId:
+        Ref: SwiftCartBastionHostSG
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+
+  # Launch Template for Web & App Tier
+  SwiftCartLaunchTemplate:
+    Type: 'AWS::EC2::LaunchTemplate'
+    Properties:
+      LaunchTemplateName: SwiftCartLaunchTemplate
+      LaunchTemplateData:
+        KeyName: !Ref KeyPair
+        InstanceType: t2.micro
+        ImageId: ami-0f403e3180720dd7e
+        NetworkInterfaces:
+          - DeviceIndex: 0
+            AssociatePublicIpAddress: true
+            DeleteOnTermination: true
+            Groups:
+              - !Ref SwiftCartSG
+        UserData:
+        Fn::Base64: !Sub |
+            #!/bin/bash
+            yum update -y
+            yum install httpd -y
+            systemctl start httpd
+            systemctl enable httpd
+            amazon-linux-extras install epel -y
+            yum install stress -y
+            echo "<h1>Welcome To Swift Cart </h1>" > /var/www/html/index.html
+
+  # Auto Scaling Group for Web Tier
+  SwiftCartASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref SwiftCartLaunchTemplate
+        Version: !GetAtt SwiftCartLaunchTemplate.LatestVersionNumber
+      MaxSize: '5'
+      MinSize: '2'
+      DesiredCapacity: '2'
+      VPCZoneIdentifier:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      MetricsCollection:
+        - Granularity: 1Minute
+
+  # Scaling Policy for Web Tier
+  SwiftCartScalingPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref SwiftCartASG
+      AdjustmentType: ChangeInCapacity
+      ScalingAdjustment: '1'
+
+  # Application Load Balancer
+  SwiftCartApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: "SwiftCartALB"
+      SecurityGroups:
+        - !Ref SwiftCartSG
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+
+  # ALB Target Group
+  SwiftCartALBTargetGroup:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      HealthCheckIntervalSeconds: '30'
+      HealthCheckTimeoutSeconds: '5'
+      Port: '80'
+      Protocol: HTTP
+      VpcId: !Ref SwiftCartVPC
+
+  # ALB Listener
+  LUBankALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref SwiftCartALBTargetGroup
+      LoadBalancerArn: !Ref SwiftCartApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+
+  # Application Tier
+  # Private Subnets for Application Tier
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref SwiftCartVPC
+      CidrBlock: 10.10.3.0/24
+      AvailabilityZone: "us-east-1a"
+      MapPublicIpOnLaunch: false
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref SwiftCartVPC
+      CidrBlock: 10.10.4.0/24
+      AvailabilityZone: "us-east-1b"
+      MapPublicIpOnLaunch: false
+
+  # Private Route Table for Application Tier
+  SwiftCartPrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref SwiftCartVPC
+
+  # Configuring Private Route Table for Application Tier
+  SwiftCartPrivateRoute:
+    Type: AWS::EC2::Route
+    DependsOn: SwiftCartNatGateway
+    Properties:
+      RouteTableId: !Ref SwiftCartPrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref SwiftCartNatGateway
+
+  # Route association for Private Subnets in Application Tier
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref SwiftCartPrivateRouteTable
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref SwiftCartPrivateRouteTable
+
+  # Security Group for Application Tier
+  SwiftCartSG2:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow HTTP & SSH access
+      VpcId: !Ref SwiftCartVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          SourceSecurityGroupId: !Ref SwiftCartBastionHostSG
+
+  # Auto Scaling Group for Application Tier
+  SwiftCartApplicationASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref SwiftCartLaunchTemplate
+        Version: !GetAtt SwiftCartLaunchTemplate.LatestVersionNumber
+      MaxSize: '5'
+      MinSize: '2'
+      DesiredCapacity: '2'
+      VPCZoneIdentifier:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      MetricsCollection:
+        - Granularity: 1Minute
+  # Scaling Policy for Application Tier
+  SwiftCartPrivateScalingPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref SwiftCartApplicationASG
+      AdjustmentType: ChangeInCapacity
+      ScalingAdjustment: '1'
+
+  # Database Tier
+  # Database Instance Security Group
+  SwiftCartDBInstanceSG:
+    Type: AWS::RDS::DBSecurityGroup
+    Properties:
+      GroupDescription: Ingress for Amazon EC2 security group
+      EC2VpcId: !Ref SwiftCartVPC
+      DBSecurityGroupIngress:
+        - EC2SecurityGroupId: !Ref SwiftCartSG
+
+  # RDS Private Subnets
+  RDSPrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref SwiftCartVPC
+      CidrBlock: 10.10.5.0/24
+      AvailabilityZone: "us-east-1a"
+      MapPublicIpOnLaunch: false
+
+  RDSPrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref SwiftCartVPC
+      CidrBlock: 10.10.6.0/24
+      AvailabilityZone: "us-east-1b"
+      MapPublicIpOnLaunch: false
+
+  # RDS Subnet Group
+  SwiftCartSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: SwiftCart subnet group
+      DBSubnetGroupName: SwiftCartSubnetGroup
+      SubnetIds:
+        - !Ref RDSPrivateSubnet1
+        - !Ref RDSPrivateSubnet2
+
+  # Route association for RDS Private Subnets
+  RDSPrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref RDSPrivateSubnet1
+      RouteTableId: !Ref SwiftCartPrivateRouteTable
+
+  RDSPrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref RDSPrivateSubnet2
+      RouteTableId: !Ref SwiftCartPrivateRouteTable
+
+  # RDS DB Instance
+  SwiftCartDBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AllocatedStorage: 15
+      DBInstanceIdentifier: SwiftCart
+      Engine: MySQL
+      EngineVersion: '8.0.35'
+      DBSecurityGroups:
+        - !Ref SwiftCartDBInstanceSG
+      DBSubnetGroupName: !Ref SwiftCartSubnetGroup
+      MasterUsername: !Ref MasterUsername
+      MasterUserPassword: !Ref MasterUserPassword
+      DBInstanceClass: db.m6gd.large
+      MultiAZ: false

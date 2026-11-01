@@ -1,0 +1,500 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+
+  KeyName:
+    Type: String
+    Description: Keyname for the keypair that Qwiklab will use
+
+  AmazonLinuxAMIID:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+
+Resources:
+#########
+# EC2 instance  (not aws cli related)
+#########
+  WebInstance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId: !Ref AmazonLinuxAMIID
+      KeyName: !Ref KeyName
+      InstanceType: t2.micro
+      NetworkInterfaces:
+        - DeviceIndex: '0'
+          AssociatePublicIpAddress: 'true'
+          SubnetId: !Ref PublicSubnet2
+          GroupSet:
+            - !Ref WebSecurityGroup
+      SourceDestCheck: 'false'
+      Tags:
+        - Key: Name
+          Value: Web Server 1
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -ex
+          # Updated to use Amazon Linux 2023
+          dnf update -y
+          dnf install -y httpd wget php-fpm php-mysqli php-json php php-devel
+          dnf install -y mariadb105-server
+          /usr/bin/systemctl enable httpd
+          /usr/bin/systemctl start httpd
+          cd /var/www/html
+          wget https://aws-tc-largeobjects.s3.amazonaws.com/CUR-TF-100-ACCLFO-2/lab5-rds/lab-app-php7.zip
+          unzip lab-app-php7.zip -d /var/www/html/
+          chown -R apache:root /var/www/html
+
+  WebSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enable HTTP access
+      GroupName: Web Security Group
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: Web Security Group
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0
+
+#########
+# NAT resources  (not aws cli related)
+#########
+  NATGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      AllocationId: !GetAtt
+        - NATGatewayEIP
+        - AllocationId
+
+  NATGatewayEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  NATGatewayRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+        Ref: NATGateway
+
+#########
+# VPC Resources (not aws cli related)
+#########
+  VPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      Tags:
+        - Key: Name
+          Value: Lab VPC
+
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    DependsOn:
+      - VPC
+
+  AttachGateway:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.0.0/24
+      AvailabilityZone: !Select
+        - '0'
+        - !GetAZs ''
+      Tags:
+        - Key: Name
+          Value: Public Subnet 1
+
+  PublicSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: !Select
+        - '1'
+        - !GetAZs ''
+      Tags:
+        - Key: Name
+          Value: Public Subnet 2
+
+  PrivateSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select
+        - '0'
+        - !GetAZs ''
+      Tags:
+        - Key: Name
+          Value: Private Subnet 1
+
+  PrivateSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.3.0/24
+      AvailabilityZone: !Select
+        - '1'
+        - !GetAZs ''
+      Tags:
+        - Key: Name
+          Value: Private Subnet 2
+
+  PublicRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: Public Route Table
+          
+  PublicRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+    DependsOn:
+      - VPC
+      - AttachGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: Private Route Table
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable
+
+
+###########
+# Resources to support AWS CLI instructions 
+###########
+
+  WorkVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: Work VPC
+
+  WorkIGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: Work IGW
+
+  WorkVPCtoIGWConnection:
+    Type: AWS::EC2::VPCGatewayAttachment
+    DependsOn:
+      - WorkIGW
+      - WorkVPC
+    Properties:
+      InternetGatewayId: !Ref WorkIGW
+      VpcId: !Ref WorkVPC
+
+  WorkPublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    DependsOn: WorkVPC
+    Properties:
+      VpcId: !Ref WorkVPC
+      Tags:
+        - Key: Name
+          Value: Work Public Route Table
+
+  WorkPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn:
+      - WorkPublicRouteTable
+      - WorkVPCtoIGWConnection
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref WorkIGW
+      RouteTableId: !Ref WorkPublicRouteTable
+
+  WorkPublicSubnet:
+    Type: AWS::EC2::Subnet
+    DependsOn: WorkVPC
+    Properties:
+      VpcId: !Ref WorkVPC
+      MapPublicIpOnLaunch: true
+      CidrBlock: 10.0.0.0/24
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs
+          Ref: AWS::Region
+      Tags:
+        - Key: Name
+          Value: Work Public Subnet
+
+  WorkPublicRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    DependsOn:
+      - WorkPublicRouteTable
+      - WorkPublicSubnet
+    Properties:
+      RouteTableId: !Ref WorkPublicRouteTable
+      SubnetId: !Ref WorkPublicSubnet
+
+###########
+# IAM Role for Work/Bastion Instance
+###########
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles: [!Ref EC2InstanceRole]
+      InstanceProfileName: Work-Role
+
+  EC2InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: EC2InstanceRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: ssm:*
+                Resource: 'arn:aws:ssm:*:*:parameter/work/*'
+
+  WorkEc2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: VPC Security Group
+      GroupName: WorkEc2SecurityGroup
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+      VpcId: !Ref WorkVPC
+
+###########
+# EC2 Work Instance
+###########
+        
+# Creates a Bastion instance.
+  BastionHost:
+    Type: AWS::EC2::Instance
+    DependsOn:
+      - WorkPublicRouteTableAssociation
+      - EC2InstanceProfile
+    Properties:
+      ImageId: !Ref AmazonLinuxAMIID
+      InstanceType: t2.micro
+      KeyName: !Ref KeyName
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true  # Optional as the subnet already has a public IP assigned.
+          DeviceIndex: 0
+          GroupSet:
+            - Ref: WorkEc2SecurityGroup
+          SubnetId: !Ref 'WorkPublicSubnet'
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -ex
+          yum update -y
+          # This sample installs AWS CLIv2
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          ./aws/install
+          rm -rf awscliv2.zip
+          rm -rf aws
+          alias aws=/usr/local/bin/aws
+      Tags:
+        -
+          Key: Name
+          Value: Bastion Host
+
+  IAMUser:
+    Type: 'AWS::IAM::User'
+    Properties:
+      UserName: awsstudent
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/ReadOnlyAccess
+
+  IAMPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    DependsOn: IAMUser
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement: [{
+            "Sid": "Lab2",
+            "Action": [
+                "ec2:*SecurityGroup*",
+                "ec2:*Subnet*",
+                "ec2-instance-connect:Send*"
+            ],
+            "Effect": "Allow",
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "aws:RequestedRegion": [
+                        "us-east-1",
+                        "us-west-2"
+                    ]
+                }
+            }
+        },
+        {
+            "Sid": "RdsAllowAllAsLongAs",
+            "Action": [
+                "rds:Add*",
+                "rds:Authorize*",
+                "rds:Copy*",
+                "rds:Create*",
+                "rds:Delete*",
+                "rds:FailoverDBCluster",
+                "rds:Modify*",
+                "rds:Promote*",
+                "rds:Reboot*",
+                "rds:Remove*",
+                "rds:ResetDB*",
+                "rds:RestoreDB*",
+                "rds:RevokeDBSecurityGroupIngress",
+                "rds:Start*",
+                "rds:Stop*",
+                "rds:SwitchoverReadReplica"
+            ],
+            "Effect": "Allow",
+            "Resource": "*",
+            "Condition": {
+                "ForAnyValue:StringLikeIfExists": {
+                    "rds:DatabaseClass": [
+                        "db.t2.micro",
+                        "db.t3.micro"
+                    ],
+                    "rds:DatabaseEngine": [
+                        "mysql"
+                    ],
+                    "aws:RequestedRegion": [
+                        "us-east-1",
+                        "us-west-2"
+                    ]
+                }
+            }
+        },
+        {
+            "Sid": "IamAllowServiceLinkedRoleCreation",
+            "Effect": "Allow",
+            "Action": "iam:CreateServiceLinkedRole",
+            "Resource": "arn:aws:iam::*:role/aws-service-role/*"
+        },
+        {
+            "Sid": "RDSRoleAndPolicies",
+            "Effect": "Allow",
+            "Action": "iam:PassRole",
+            "Resource": "*",
+            "Condition": {
+                "StringLikeIfExists": {
+                    "iam:AWSServiceName": "rds.amazonaws.com",
+                    "iam:PassedToService": "rds.amazonaws.com"
+                }
+            }
+        },
+        {
+            "Sid": "RestrictActions",
+            "Effect": "Deny",
+            "Action": [
+                "ec2:*Spot*",
+                "ec2:*ReservedInstances*",
+                "ec2:*Scheduled*",
+                "ec2:*Purchase*",
+                "ec2:EnableFastSnapshotRestores",
+                "rds:Purchase*"
+            ],
+            "Resource": "*"
+        }]
+      ManagedPolicyName: lab_policy
+      Users:
+        - awsstudent
+
+  IAMUserAccessKey:
+    Type: 'AWS::IAM::AccessKey'
+    DependsOn: IAMUser
+    Properties:
+      Status: Active
+      UserName: awsstudent
+
+Outputs:
+  WebServer:
+    Description: Public IP address of Web Server
+    Value: !GetAtt 'WebInstance.PublicIp'
+    
+
+  AccessKey:
+    Value:
+      Ref: IAMUserAccessKey
+  SecretKey:
+    Value:
+      'Fn::GetAtt':
+        - IAMUserAccessKey
+        - SecretAccessKey
+
+  BastionHost:
+    Description: BastionHost server's public IP address.
+    Value: !GetAtt 'BastionHost.PublicIp'
+
+  Region:
+    Description: The region for the lab. 
+    Value: !Ref "AWS::Region"
