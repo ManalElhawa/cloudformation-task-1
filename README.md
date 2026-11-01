@@ -37,8 +37,6 @@ Tested the template file for the 3 tier website to create: VPC, Public & Private
 
 Tried to add tags to all resources, but they are not supported under Scaling groups, launch templates, attache gateway,...
 
-
-
 =============================================================================
 ### References
 
@@ -51,12 +49,13 @@ Prompt:
 
 ```what files should I add to a github repo (similar to a README file) to follow git repos best practices? Given that the repo will include a cloudformation project to deploy a website on AWS using cloudformation?```
 
-- [CloudFormation Templates](https://github.com/aws-cloudformation/aws-cloudformation-templates/)
-
 -----------------------------------------------------------------------------------------------------
+- All the template files that I have used as referene can be found in [REF](./Ref/)
 
-- Used Lab 05 & 06 CloudFormation stack files in the AWS Cloud Foundation course as reference.
+- Used Lab 05 & 06 CloudFormation stack files in the AWS Cloud Foundation course as reference. 
 
-- Used the architecture in [Building and Deploying a 3-tier Architecture with AWS CloudFormation](https://medium.com/@nifemi.sofowoke/building-and-deploying-a-3-tier-architecture-with-aws-cloudformation-415f198c1cda) as a reference.
+- Used the architecture in [Building and Deploying a 3-tier Architecture with AWS CloudFormation](https://medium.com/@nifemi.sofowoke/building-and-deploying-a-3-tier-architecture-with-aws-cloudformation-415f198c1cda) as a reference. This example had 3 Tier website, but the app, web and DB don't communicate with each other. And both the app and web layers serve a static page. And no tags were added to any resources.
+
+- [CloudFormation Templates](https://github.com/aws-cloudformation/aws-cloudformation-templates/)
 
 -----------------------------------------------------------------------------------------------------
