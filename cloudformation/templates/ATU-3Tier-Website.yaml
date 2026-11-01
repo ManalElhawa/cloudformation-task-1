@@ -65,18 +65,23 @@ Resources:
           Value: ATU
         - Key: Environment
           Value: Test
-  
+
+  DBPrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+    VpcId: !Ref VPC
+
   PrivateSubnet3RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PrivateSubnet3
-      RouteTableId: !Ref AppPrivateRouteTable
+      RouteTableId: !Ref DBPrivateRouteTable
 
   PrivateSubnet4RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PrivateSubnet4
-      RouteTableId: !Ref AppPrivateRouteTable
+      RouteTableId: !Ref DBPrivateRouteTable
 
   DBSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
