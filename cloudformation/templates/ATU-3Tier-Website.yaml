@@ -500,7 +500,7 @@ Resources:
             mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
             try {
-                <?php
+                $db = new mysqli($host, $user, $password, 'mysql', 3306);
                 $result = $db->query('SELECT 1 AS connection_test, VERSION() AS server_version');
                 $details = $result->fetch_assoc();
 
@@ -611,3 +611,24 @@ Resources:
           Value: ATU
         - Key: Environment
           Value: Test
+
+Outputs:
+  WebsiteURL:
+    Description: Public website URL
+    Value: !Sub 'http://${WebApplicationLoadBalancer.DNSName}'
+
+  DatabaseCheckURL:
+    Description: URL that checks app-to-database connectivity
+    Value: !Sub 'http://${WebApplicationLoadBalancer.DNSName}/app/db-check.php'
+
+  DatabaseEndpoint:
+    Description: RDS endpoint hostname
+    Value: !GetAtt RDSDBInstance.Endpoint.Address
+
+  DatabasePort:
+    Description: RDS connection port
+    Value: !GetAtt RDSDBInstance.Endpoint.Port
+
+  InternalAppLoadBalancerDNS:
+    Description: Internal app load balancer DNS name
+    Value: !GetAtt AppApplicationLoadBalancer.DNSName
