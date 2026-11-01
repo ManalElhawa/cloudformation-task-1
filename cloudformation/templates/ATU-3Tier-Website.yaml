@@ -69,7 +69,14 @@ Resources:
   DBPrivateRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
-    VpcId: !Ref VPC
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: Website DB Private Route Table
+        - Key: Organization
+          Value: ATU
+        - Key: Environment
+          Value: Test
 
   PrivateSubnet3RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -410,6 +417,13 @@ Resources:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: Website APP Private Route Table
+        - Key: Organization
+          Value: ATU
+        - Key: Environment
+          Value: Test
 
   AppPrivateRoute:
     Type: AWS::EC2::Route
