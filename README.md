@@ -9,6 +9,8 @@ Student Name: Manal Elhawa
 
 ### Design
 
+- For the static website, I used cloudfront ( for content delivery) & S3 (to storae the static web page). After creating the stack, I upload the [index.html](./website/index.html) manualy to the S3 bucket. Screenshots can be found in [Static Website](./output/Test-Final:1-Nov/Static%20Website/)
+
 - For the 3 tier website, I wanted to build a highly available website.
 ![image](./design/AWS_3Tier_Website.jpg)
 
@@ -37,6 +39,7 @@ Tested the template file for the 3 tier website to create: VPC, Public & Private
 
 Tried to add tags to all resources, but they are not supported under Scaling groups, launch templates, attache gateway,...
 
+Added tags to the static website
 =============================================================================
 ### References
 
