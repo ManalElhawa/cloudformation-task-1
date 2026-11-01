@@ -1,5 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Static 3-tier website using AWS CloudFront, S3, EC2 and RDS 
+
+Description: Static website using AWS CloudFront and S3
+
 Resources:
   # 1. Private bucket for website content
   WebsiteBucket:
@@ -13,6 +15,13 @@ Resources:
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced
+      Tags:
+        - Key: Name
+          Value: Website Bucket
+        - Key: Organization
+          Value: ATU
+        - Key: Environment
+          Value: Test
 
   # 2. CloudFront Origin Access Control
   WebsiteOAC:
@@ -57,6 +66,14 @@ Resources:
 
         ViewerCertificate:
           CloudFrontDefaultCertificate: true
+      
+      Tags:
+        - Key: Name
+          Value: Website CloudFront Distribution
+        - Key: Organization
+          Value: ATU
+        - Key: Environment
+          Value: Test
 
   # 4. Allow only this distribution to read S3 objects
   WebsiteBucketPolicy:
