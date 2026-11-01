@@ -6,7 +6,11 @@ Student ID: L00205331
 Student Name: Manal Elhawa
 
 =============================================================================
+### Code
 
+The cloudformation templates can be found in [templates](./cloudformation/templates)
+
+=============================================================================
 ### Design
 
 - For the static website, I used cloudfront ( for content delivery) & S3 (to storae the static web page). After creating the stack, I upload the [index.html](./website/index.html) manualy to the S3 bucket. Screenshots can be found in [Static Website](./output/Test-Final:1-Nov/Static%20Website/)
