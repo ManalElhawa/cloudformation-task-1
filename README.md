@@ -6,6 +6,21 @@ Student ID: L00205331
 Student Name: Manal Elhawa
 
 =============================================================================
+
+### Design
+
+- For the 3 tier website, I wanted to build a highly available website.
+![image](./design/AWS_3Tier_Website.jpg)
+
+- However, the DB multi-AZ deployment is not available in the AWS free tier account. So I created a single RDS instance.
+
+- It is recommended to use HTTPS insetad of HTTP. But since this is a lab environment, I used HTTP for simplicity.
+
+- In a production setup tags are important to track ownership and billing. As a sample I have created tags for the environment, orgnaization and name.
+
+- Also in a production setup, the DB password will be stored in a seceret managemnt software (vault). But since this is not available here, I have added the password as a user variable.
+
+=============================================================================
 ### Work Log
 
 - Monday 19-Oct
@@ -13,6 +28,14 @@ Student Name: Manal Elhawa
 Tested the template file only using the CloudFront & S3.
 
 After uploading the template, I uploaded the index.htm to the S3 bucket 
+
+- Friday 30-Oct
+
+Tested the template file for the 3 tier website to create: VPC, Public & Private subnets, and security groups.
+
+- Saturday 31-Oct
+
+Tried to add tags to all resources, but they are not supported under Scaling groups, launch templates, attache gateway,...
 
 =============================================================================
 ### References
@@ -26,5 +49,13 @@ Prompt:
 
 ```what files should I add to a github repo (similar to a README file) to follow git repos best practices? Given that the repo will include a cloudformation project to deploy a website on AWS using cloudformation?```
 
+-----------------------------------------------------------------------------------------------------
+- All the template files that I have used as referene can be found in [REF](./Ref/)
+
+- Used Lab 05 & 06 CloudFormation stack files in the AWS Cloud Foundation course as reference. 
+
+- Used the architecture in [Building and Deploying a 3-tier Architecture with AWS CloudFormation](https://medium.com/@nifemi.sofowoke/building-and-deploying-a-3-tier-architecture-with-aws-cloudformation-415f198c1cda) as a reference. This example had 3 Tier website, but the app, web and DB don't communicate with each other. And both the app and web layers serve a static page. And no tags were added to any resources.
+
 - [CloudFormation Templates](https://github.com/aws-cloudformation/aws-cloudformation-templates/)
 
+-----------------------------------------------------------------------------------------------------
